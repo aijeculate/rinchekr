@@ -40,7 +40,7 @@
 -   **Smart Launching**: Link your `.exe`, `.lnk`, or `.vbs` and play directly from the app.
 
 <p align="center">
-  <img src="https://i.imgur.com/eP6Psxn.png" alt="Game Details" width="48%" style="border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);" />
+  <img src="https://i.imgur.com/17jMxqC.png" alt="Game Details" width="48%" style="border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);" />
   <img src="https://i.imgur.com/PvZZJA5.png" alt="Settings & Dark Mode" width="48%" style="border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);" />
 </p>
 
