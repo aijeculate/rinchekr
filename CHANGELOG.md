@@ -15,6 +15,7 @@
 -   **Performance**: Improved metadata fetching reliability by bypassing Cloudflare checks with a real User-Agent.
 
 ### Fixed
+-   **Critical**: Fixed blank screen issue in production builds by correcting Vite base path and build output directory.
 -   Fixed a crash when trying to launch non-executable file types (vbs/lnk).
 -   Fixed broken layout in the Settings window.
 -   Fixed "X" button visibility issues in Game Details and Settings.
