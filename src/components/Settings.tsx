@@ -219,14 +219,18 @@ export const Settings: React.FC<SettingsProps> = ({
                         <IGDBSettings />
                     </div>
 
-                </div>
-
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: '24px', flexShrink: 0 }}>
-                    <h3 style={{ fontSize: '1rem', marginTop: 0 }}>About</h3>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                        <p style={{ margin: '4px 0' }}><strong>CS.RIN.RU Update Checker</strong> v3.18.3</p>
-                        <p style={{ margin: '4px 0' }}>Premium game manager & update tracker.</p>
+                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: '24px' }}>
+                        <h3 style={{ fontSize: '1rem', marginTop: 0 }}>About</h3>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                            <p style={{ margin: '4px 0' }}><strong>CS.RIN.RU Update Checker</strong> v3.18.7</p>
+                            <p style={{ margin: '4px 0' }}>Premium game manager & update tracker.</p>
+                            <div style={{ marginTop: '32px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85em' }}>
+                                <p>RinChekr v3.18.7</p>
+                                <p style={{ marginTop: '4px' }}>Created by <span style={{ color: 'var(--accent)', fontWeight: 600 }}>aijeculate</span></p>
+                            </div>
+                        </div>
                     </div>
+
                 </div>
             </div>
         </div>

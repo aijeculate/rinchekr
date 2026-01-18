@@ -199,12 +199,38 @@ function App() {
 
               <div className="game-info">
                 <h3 className="game-title">{game.name}</h3>
+
+                {viewMode === 'list' && (
+                  <div style={{ display: 'flex', gap: '16px', fontSize: '0.8em', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    <span title="Last Game Update">📅 {game.lastUpdated ? new Date(game.lastUpdated).toLocaleDateString() : '-'}</span>
+                    <span title="Last Checked Time">🕒 {game.lastChecked ? new Date(game.lastChecked).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                  </div>
+                )}
+
                 {!game.imageUrl && <p className="game-status-text">{game.status.replace('-', ' ')}</p>}
 
                 {viewMode === 'grid' && (
                   <>
-                    <div className="meta-info">
-                      <span>{game.lastUpdated ? new Date(game.lastUpdated).toLocaleDateString() : 'Never'}</span>
+                    <div className="meta-info" style={{
+                      fontSize: '0.75em',
+                      color: 'var(--text-secondary)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      marginBottom: '8px',
+                      background: 'var(--bg-app)',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      width: '100%'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Updated:</span>
+                        <span style={{ fontWeight: 600 }}>{game.lastUpdated ? new Date(game.lastUpdated).toLocaleDateString() : '-'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Checked:</span>
+                        <span>{game.lastChecked ? new Date(game.lastChecked).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                      </div>
                     </div>
                     <div className="card-actions" style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
                       <button
@@ -290,39 +316,43 @@ function App() {
         }}
       />
 
-      {isAddModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal glass">
-            <div className="modal-header">
-              <h2>Add Game</h2>
-            </div>
+      {
+        isAddModalOpen && (
+          <div className="modal-overlay">
+            <div className="modal glass">
+              <div className="modal-header">
+                <h2>Add Game</h2>
+              </div>
 
-            {errorMsg && <div className="error-banner">{errorMsg}</div>}
-            <div className="form-group">
-              <label>Name (Optional - Auto-fetched via Steam)</label>
-              <input value={newGameName} onChange={e => setNewGameName(e.target.value)} placeholder="e.g. Cyberpunk 2077" />
-            </div>
-            <div className="form-group">
-              <label>CS.RIN.RU Topic URL</label>
-              <input value={newGameUrl} onChange={e => setNewGameUrl(e.target.value)} placeholder="https://cs.rin.ru/forum/..." />
-            </div>
-            <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button onClick={() => setIsAddModalOpen(false)} className="btn-secondary">Cancel</button>
-              <button onClick={handleAddGame} className="btn-primary">Add Game</button>
+              {errorMsg && <div className="error-banner">{errorMsg}</div>}
+              <div className="form-group">
+                <label>Name (Optional - Auto-fetched via Steam)</label>
+                <input value={newGameName} onChange={e => setNewGameName(e.target.value)} placeholder="e.g. Cyberpunk 2077" />
+              </div>
+              <div className="form-group">
+                <label>CS.RIN.RU Topic URL</label>
+                <input value={newGameUrl} onChange={e => setNewGameUrl(e.target.value)} placeholder="https://cs.rin.ru/forum/..." />
+              </div>
+              <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button onClick={() => setIsAddModalOpen(false)} className="btn-secondary">Cancel</button>
+                <button onClick={handleAddGame} className="btn-primary">Add Game</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {selectedGame && (
-        <GameDetails
-          game={selectedGame}
-          onClose={() => setSelectedGame(null)}
-          onLaunch={handleLaunch}
-          onRemove={handleRemove}
-          onUpdate={handleUpdateGame}
-        />
-      )}
+      {
+        selectedGame && (
+          <GameDetails
+            game={selectedGame}
+            onClose={() => setSelectedGame(null)}
+            onLaunch={handleLaunch}
+            onRemove={handleRemove}
+            onUpdate={handleUpdateGame}
+          />
+        )
+      }
     </div>
   )
 }
