@@ -214,6 +214,54 @@ export const GameDetails: React.FC<GameDetailsProps> = ({ game, onClose, onLaunc
                     <span>Last Checked: {game.lastChecked ? new Date(game.lastChecked).toLocaleString() : 'Never'}</span>
                 </div>
 
+                {/* Debug Info Section */}
+                <div style={{ marginTop: '20px', padding: '12px', background: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.85em' }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-secondary)' }}>Debug Analysis</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 12px', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Status:</span>
+                        <span style={{ fontFamily: 'monospace' }}>{game.status}</span>
+
+                        <span style={{ color: 'var(--text-secondary)' }}>Note:</span>
+                        <span style={{ wordBreak: 'break-all' }}>{game.debugNote || 'No analysis data'}</span>
+
+                        {game.debugLatestPostUrl && (
+                            <>
+                                <span style={{ color: 'var(--text-secondary)' }}>Latest Post:</span>
+                                <a href="#" onClick={() => window.api.openExternal(game.debugLatestPostUrl!)} style={{ color: 'var(--primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    View <Globe size={12} />
+                                </a>
+                            </>
+                        )}
+
+                        {game.debugUpdatePostUrl && (
+                            <>
+                                <span style={{ color: 'var(--text-secondary)' }}>Update Post:</span>
+                                <a href="#" onClick={() => window.api.openExternal(game.debugUpdatePostUrl!)} style={{ color: 'var(--success)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    View Source <Globe size={12} />
+                                </a>
+                            </>
+                        )}
+
+                        {game.debugLatestPostText && (
+                            <div style={{ gridColumn: '1 / -1', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)', fontSize: '0.9em' }}>
+                                <div style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>Latest Activity Snippet:</div>
+                                <div style={{ padding: '6px', background: 'var(--bg-main)', borderRadius: '4px', fontStyle: 'italic', opacity: 0.8 }}>
+                                    "{game.debugLatestPostText}"
+                                </div>
+                            </div>
+                        )}
+
+                        {game.debugUpdatePostText && (
+                            <div style={{ gridColumn: '1 / -1', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)', fontSize: '0.9em' }}>
+                                <div style={{ color: 'var(--success)', marginBottom: '4px', fontWeight: 'bold' }}>✨ Update Analysis:</div>
+                                <div style={{ padding: '6px', background: 'var(--bg-main)', borderRadius: '4px', fontStyle: 'italic', opacity: 0.8, color: 'var(--text-primary)' }}>
+                                    "{game.debugUpdatePostText}"
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 <div className="modal-actions" style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
                     <button onClick={() => onRemove(game.id)} className="btn-icon danger" title="Delete Game">
                         <Trash2 size={18} />

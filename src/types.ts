@@ -13,6 +13,12 @@ export interface Game {
     size?: string
     lastPostUrl?: string
     executablePath?: string
+    debugLatestPostUrl?: string;
+    debugUpdatePostUrl?: string; // URL of the post that triggered the update status
+    debugNote?: string;
+    lastKnownUpdateUrl?: string; // The URL of the last confirmed update (to avoid repeat notifications)
+    debugLatestPostText?: string; // Snippet of the latest post
+    debugUpdatePostText?: string; // Snippet of the update post
 }
 
 export interface ElectronApi {

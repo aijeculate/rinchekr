@@ -20,6 +20,12 @@ interface Game {
     size?: string
     lastPostUrl?: string
     executablePath?: string
+    debugLatestPostUrl?: string
+    debugUpdatePostUrl?: string
+    debugNote?: string
+    lastKnownUpdateUrl?: string
+    debugLatestPostText?: string
+    debugUpdatePostText?: string
 }
 
 const store = new Store<{
@@ -291,54 +297,108 @@ app.whenReady().then(() => {
     }
 
     // Helper: Check for Updates (Real Logic)
-    const checkForUpdates = async (url: string, lastPostUrl?: string) => {
-        return new Promise<{ status: Game['status'], lastPostUrl?: string, updateDate?: string }>((resolve) => {
+    const checkForUpdates = async (url: string, lastPostUrl?: string, lastKnownUpdateUrl?: string) => {
+        return new Promise<{ status: Game['status'], lastPostUrl?: string, updateDate?: string, lastKnownUpdateUrl?: string, debugLatestPostUrl?: string, debugUpdatePostUrl?: string, debugNote?: string, debugLatestPostText?: string, debugUpdatePostText?: string }>((resolve) => {
             const fetcher = new BrowserWindow({
                 show: false,
                 width: 1024,
                 height: 800,
                 webPreferences: { offscreen: true } // Render offscreen
             })
+            // fetcher.webContents.openDevTools({ mode: 'detach' });
 
             let retries = 0;
             const maxRetries = 1;
 
             const timeout = setTimeout(() => {
                 if (!fetcher.isDestroyed()) fetcher.destroy();
-                resolve({ status: 'error' });
-            }, 30000); // 30s timeout for full page load
+                resolve({ status: 'error', debugNote: 'Timeout waiting for page load' });
+            }, 45000); // 45s timeout
 
             fetcher.webContents.on('did-finish-load', async () => {
                 try {
                     const title = fetcher.getTitle();
-                    // Cloudflare Bypass
-                    if (title.match(/Just a moment|Security Check|Attention Required|Cloudflare/i)) {
+                    // Cloudflare check
+                    if (title.includes('Just a moment') || title.includes('Attention Required')) {
+                        console.log('Cloudflare detected (Update Check). Retries:', retries);
                         if (retries < maxRetries) {
                             retries++;
                             return;
                         }
                         if (!fetcher.isDestroyed()) fetcher.destroy();
                         clearTimeout(timeout);
-                        resolve({ status: 'error' });
+                        resolve({ status: 'error', debugNote: 'Blocked by Cloudflare (Security Check)' });
                         return;
                     }
 
                     // Scrape Posts
                     const posts = await fetcher.webContents.executeJavaScript(`
                         (() => {
-                            const posts = Array.from(document.querySelectorAll('.post')); 
-                            // Note: RIN structure is .post.bg1/.bg2
-                            // Also need to handle "View topic - ..."
-                            
-                            return posts.map(p => {
-                                const id = p.id; // e.g., p153567
-                                const content = p.querySelector('.content')?.innerHTML || '';
-                                const text = p.querySelector('.content')?.innerText || '';
-                                
-                                // Find post link (usually in h3 > a)
-                                const linkElem = p.querySelector('h3 a') || p.querySelector('.post-subject a');
-                                const url = linkElem ? linkElem.href : '';
+                            // Strategy 1: Look for div[id^="p"] but strictly numeric suffix (e.g. p153567)
+                            const allP = Array.from(document.querySelectorAll('div[id^="p"], table[id^="p"]'));
+                            let posts = allP.filter(el => /^p\\d+$/.test(el.id));
 
+                            if (posts.length === 0) {
+                                // Fallback: classes .row1, .row2 (common in RIN tables)
+                                posts = Array.from(document.querySelectorAll('.row1, .row2'));
+                                // Filter to ensure they contain a postbody or content
+                                posts = posts.filter(el => el.querySelector('.postbody') || el.querySelector('.content'));
+                            }
+                            
+                             if (posts.length === 0) {
+                                // Last ditch: .postbody directly
+                                const bodies = Array.from(document.querySelectorAll('.postbody'));
+                                if (bodies.length > 0) {
+                                    posts = bodies; 
+                                }
+                            }
+                            
+                            return posts.map((p, index) => {
+                                // Content extraction
+                                let content = p.querySelector('.content')?.innerHTML || '';
+                                if (!content) {
+                                    const pb = p.querySelector('.postbody');
+                                    if (pb) content = pb.innerHTML;
+                                    else content = p.innerHTML;
+                                }
+                                let text = (p instanceof HTMLElement) ? p.innerText : '';
+                                // Clean up text (remove quotes, truncation)
+                                text = text.replace(/Quote:[\s\S]*?wrote:/g, '') // Remove quote headers
+                                           .replace(/\s+/g, ' ').trim();
+                                if (text.length > 200) text = text.substring(0, 200) + '...';
+                                
+                                // robust URL & ID extraction
+                                let url = '';
+                                let id = p.id;
+
+                                // Find any link to viewtopic
+                                const links = Array.from(p.querySelectorAll('a[href*="viewtopic.php"]'));
+                                // Prioritize links with #pXXXX or p=XXXX
+                                const bestLink = links.find(l => l.href.includes('#p') || l.href.includes('p=')) || links[0];
+                                
+                                if (bestLink) {
+                                    url = bestLink.href;
+                                } else {
+                                    // Fallback: Check header/subject
+                                    const subj = p.querySelector('h3 a, .post-subject a');
+                                    if (subj) url = subj.href;
+                                }
+
+                                // If ID is missing or generated/generic, try to extract from URL
+                                if (!id || !/^p\\d+$/.test(id)) {
+                                    if (url) {
+                                        const match = url.match(/[?&]p=(\\d+)/) || url.match(/#p(\\d+)/);
+                                        if (match) id = 'p' + match[1];
+                                    }
+                                    
+                                    if (!id || !/^p\\d+$/.test(id)) {
+                                         // Still no ID? Look for <a name="pXXXX"> inside
+                                        const anchor = p.querySelector('a[name^="p"]');
+                                        if (anchor) id = anchor.name;
+                                        else id = 'generated_' + index;
+                                    }
+                                }
+                                
                                 return { id, content, text, url };
                             });
                         })()
@@ -349,56 +409,82 @@ app.whenReady().then(() => {
 
                     // Analyze Posts
                     let hasUpdate = false;
-                    let hasNewActivity = false;
-                    let latestPostUrl = lastPostUrl;
 
-                    // If no posts found, maybe structure changed or login required
+
                     if (!posts || posts.length === 0) {
-                        resolve({ status: 'checking' }); // or 'up-to-date' fallback
+                        resolve({ status: 'up-to-date', debugNote: 'No posts found on page (Scraper mismatch?)' });
                         return;
                     }
 
-                    // Iterate posts (they are usually chronological OLD -> NEW on a page)
-                    // We need to find posts NEWER than lastPostUrl.
-                    // If lastPostUrl is undefined, we assume everything is "new" but maybe not an update unless scored high.
-
-                    // Simple check: Is the LAST post on this page different from our stored lastPostUrl?
-                    // If so, we have new activity.
+                    // Determine "Latest Post" (Cursor)
                     const lastPagePost = posts[posts.length - 1];
+                    const latestPostUrl = lastPagePost ? lastPagePost.url : lastPostUrl;
+                    let debugUpdatePostUrl = undefined;
+                    let debugLatestPostText = lastPagePost?.text || '';
+                    let debugUpdatePostText = undefined;
+                    let debugNote = `Latest Post: ${lastPagePost?.id || '?'}`;
+                    let resultStatus: Game['status'] = 'up-to-date';
+                    let newLastKnownUpdateUrl = lastKnownUpdateUrl;
 
+                    // Check Logic
                     if (lastPagePost && lastPagePost.url !== lastPostUrl) {
-                        hasNewActivity = true;
-                        latestPostUrl = lastPagePost.url;
 
-                        // Check scores of ALL new posts (after the one we knew)
-                        // If we don't know which one was last, we check all on this page.
-                        // Optimization: Check from bottom up.
+                        // Look for updates in the new posts (or all posts on page if needed, but usually new ones)
+                        // Iterate backwards to find the *latest* update if multiple
                         for (let i = posts.length - 1; i >= 0; i--) {
                             const p = posts[i];
-                            if (p.url === lastPostUrl) break; // Reached known state
-
                             const score = calculatePostScore(p.content, p.text);
-                            // console.log('Post Score:', p.id, score);
 
-                            if (score > 0) {
-                                // > 0 means "Activity" but for "Update Available" we want high confidence?
-                                // Scorer says > 15 is match.
-                                if (score > 15) {
-                                    hasUpdate = true;
-                                    break; // Found an update!
+                            if (score > 15) {
+                                hasUpdate = true;
+                                debugUpdatePostUrl = p.url;
+                                debugUpdatePostText = p.text;
+
+                                // Persistent Update Check:
+                                // If this update URL matches what we already know, it's not "Update Available" AGAIN.
+                                if (p.url === lastKnownUpdateUrl) {
+                                    debugNote = `Update Found (Seen): ${score} (Post: ${p.id})`;
+                                    resultStatus = 'up-to-date'; // Treat as up-to-date user-facing
+                                } else {
+                                    debugNote = `Update Found! Score: ${score} (Post: ${p.id})`;
+                                    resultStatus = 'update-available';
+                                    newLastKnownUpdateUrl = p.url; // Save this as the new known update
                                 }
+                                break; // Found an update!
+                            } else if (score > 0) {
+                                // Just interesting activity
                             }
                         }
+
+                        if (!hasUpdate) {
+                            resultStatus = 'new-activity';
+                            debugNote = 'New activity found (No verified update)';
+                        }
+
+                    } else {
+                        debugNote = 'No new posts found (Up to date)';
+                        resultStatus = 'up-to-date';
                     }
 
-                    if (hasUpdate) resolve({ status: 'update-available', lastPostUrl: latestPostUrl, updateDate: new Date().toISOString() });
-                    else if (hasNewActivity) resolve({ status: 'new-activity', lastPostUrl: latestPostUrl });
-                    else resolve({ status: 'up-to-date', lastPostUrl: latestPostUrl });
+                    // Fallback: If status is 'update-available' but we decided it's seen, it's 'up-to-date'.
+                    // If we found NO new activity but there IS a known updateUrl that matches the latest post on page? 
+                    // No, simpler: if logic says 'update-available', we return it.
 
+                    resolve({
+                        status: resultStatus,
+                        lastPostUrl: latestPostUrl,
+                        updateDate: resultStatus === 'update-available' ? new Date().toISOString() : undefined,
+                        lastKnownUpdateUrl: newLastKnownUpdateUrl,
+                        debugLatestPostUrl: latestPostUrl,
+                        debugUpdatePostUrl: debugUpdatePostUrl,
+                        debugNote: debugNote,
+                        debugLatestPostText: debugLatestPostText,
+                        debugUpdatePostText: debugUpdatePostText
+                    });
                 } catch (e) {
-                    if (!fetcher.isDestroyed()) fetcher.destroy();
+                    // if (!fetcher.isDestroyed()) fetcher.destroy();
                     clearTimeout(timeout);
-                    resolve({ status: 'error' });
+                    resolve({ status: 'error', debugNote: `Script Error: ${e}` });
                 }
             })
 
@@ -573,19 +659,36 @@ app.whenReady().then(() => {
 
     ipcMain.handle('check-game', async (_event, id: string) => {
         const games = store.get('games', [])
-        const game = games.find(g => g.id === id)
-        if (!game) return null;
+        const gameId = id; // use variable
+        const gameIndex = games.findIndex(g => g.id === gameId);
+
+        if (gameIndex === -1) return null;
+
+        const game = games[gameIndex];
 
         // Use Real Logic
-        const result = await checkForUpdates(game.url, game.lastPostUrl);
+        const result = await checkForUpdates(game.url, game.lastPostUrl, game.lastKnownUpdateUrl);
 
-        return {
-            id: game.id,
+        // Merge updates
+        const updatedGame = {
+            ...game,
             status: result.status,
-            lastPostUrl: result.lastPostUrl, // Save the new post URL
-            lastUpdated: result.updateDate || game.lastUpdated, // Only update date if meaningful
-            lastChecked: new Date().toISOString()
-        }
+            lastPostUrl: result.lastPostUrl,
+            lastKnownUpdateUrl: result.lastKnownUpdateUrl || game.lastKnownUpdateUrl,
+            lastUpdated: result.updateDate || game.lastUpdated,
+            lastChecked: new Date().toISOString(),
+            debugLatestPostUrl: result.debugLatestPostUrl,
+            debugUpdatePostUrl: result.debugUpdatePostUrl,
+            debugNote: result.debugNote,
+            debugLatestPostText: result.debugLatestPostText,
+            debugUpdatePostText: result.debugUpdatePostText
+        };
+
+        // SAVE TO STORE!
+        games[gameIndex] = updatedGame;
+        store.set('games', games);
+
+        return updatedGame;
     })
 
     ipcMain.handle('check-all-updates', async () => {
@@ -597,14 +700,20 @@ app.whenReady().then(() => {
 
         for (let i = 0; i < updatedGames.length; i++) {
             const game = updatedGames[i];
-            const result = await checkForUpdates(game.url, game.lastPostUrl);
+            const result = await checkForUpdates(game.url, game.lastPostUrl, game.lastKnownUpdateUrl);
 
             updatedGames[i] = {
                 ...game,
                 status: result.status,
                 lastPostUrl: result.lastPostUrl || game.lastPostUrl,
+                lastKnownUpdateUrl: result.lastKnownUpdateUrl || game.lastKnownUpdateUrl,
                 lastUpdated: result.updateDate || game.lastUpdated,
-                lastChecked: new Date().toISOString()
+                lastChecked: new Date().toISOString(),
+                debugLatestPostUrl: result.debugLatestPostUrl,
+                debugUpdatePostUrl: result.debugUpdatePostUrl,
+                debugNote: result.debugNote,
+                debugLatestPostText: result.debugLatestPostText,
+                debugUpdatePostText: result.debugUpdatePostText
             };
 
             store.set('games', updatedGames); // Save incrementally

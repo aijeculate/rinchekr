@@ -37,7 +37,9 @@ function App() {
           if (data.status === 'update-available') {
             addToast(`Update found for ${g.name}!`, 'info');
           }
-          return { ...g, ...data, lastChecked: new Date().toISOString() }
+          const updated = { ...g, ...data, lastChecked: new Date().toISOString() };
+          setSelectedGame(prevSelected => prevSelected?.id === data.id ? updated : prevSelected);
+          return updated;
         }
         return g
       }))
@@ -106,13 +108,16 @@ function App() {
     addToast('Checking for updates...', 'info');
     // Set status to checking locally first
     setGames(prev => prev.map(g => g.id === id ? { ...g, status: 'checking' } : g));
+    if (selectedGame?.id === id) setSelectedGame({ ...selectedGame, status: 'checking' });
 
     try {
       const result = await window.api.checkGame(id);
       setGames(prev => prev.map(g => g.id === id ? { ...g, ...result } : g));
+      if (selectedGame?.id === id) setSelectedGame(prev => prev ? ({ ...prev, ...result }) : null);
       addToast('Update check complete', 'success');
     } catch (e) {
       setGames(prev => prev.map(g => g.id === id ? { ...g, status: 'error' } : g));
+      if (selectedGame?.id === id) setSelectedGame(prev => prev ? ({ ...prev, status: 'error' }) : null);
       addToast('Failed to check for updates', 'error');
     }
   }
