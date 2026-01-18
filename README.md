@@ -30,7 +30,7 @@
 **RinChekr** isn't just a tool; it's the best way to manage your CS.RIN.RU library. Experience a sleek, dark-themed interface designed for gamers.
 
 <div align="center">
-  <img src="https://i.imgur.com/pL35iOr.png" alt="Main Library View" width="100%" style="border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px;" />
+  <img src="https://i.imgur.com/Adh78lg.png" alt="Main Library View" width="100%" style="border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px;" />
 </div>
 
 ### Key Features
@@ -40,8 +40,8 @@
 -   **Smart Launching**: Link your `.exe`, `.lnk`, or `.vbs` and play directly from the app.
 
 <p align="center">
-  <img src="https://i.imgur.com/eP6Psxn.png" alt="Game Details" width="48%" style="border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);" />
-  <img src="https://i.imgur.com/PvZZJA5.png" alt="Settings & Dark Mode" width="48%" style="border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);" />
+  <img src="https://i.imgur.com/Q9TIvop.png" alt="Game Details" width="48%" style="border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);" />
+  <img src="https://i.imgur.com/K1QKfTz.png" alt="Settings & Dark Mode" width="48%" style="border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);" />
 </p>
 
 -   **Interactive Login**: No token hacking. Just log in securely via the built-in browser.
