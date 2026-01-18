@@ -19,7 +19,9 @@
 
 -   **Automatic Update Checking**: Scrapes the forum topic for the latest posts and intelligently scores them to find updates.
 -   **Rich Metadata**: Automatically fetches high-quality game covers, descriptions, and genres using **Steam** and **IGDB**.
--   **Premium UI**: A sleek, dark-themed interface with glassmorphism effects, smooth animations, and responsive layout.
+-   **Premium UI**: A sleek, dark-themed interface with glassmorphism effects, smooth animations, and responsive layout. Now with **Light Mode** support!
+-   **At-a-Glance Stats**: See "Last Updated" and "Last Checked" dates directly on your game cards.
+-   **Smart Onboarding**: Built-in tutorial to get you started and explain the "Anti-Timeout" security features.
 -   **Notification System**: Get instant alerts (Toasts) when a new update is found.
 -   **Interactive Login**: secure, browser-based login to CS.RIN.RU (no manual cookie copying required).
 -   **Smart Search**: Just paste the forum link, and RinChekr handles the rest.
@@ -48,6 +50,8 @@
 -   **Notifications**: Instant alerts when your favorite game gets a patch.
 -   **Portable**: Take your library anywhere. Zero installation required.
 
+## 💾 Installation
+
 1.  Go to the [Releases](tags) page.
 2.  Download the latest installer (`Setup.exe`) or the Portable version.
 3.  Run the application.
@@ -55,9 +59,9 @@
 ## 📖 Usage
 
 ### First Run
-1.  Click the **Settings** (Gear) icon.
-2.  Under **Forum Access**, click **Login via Browser**.
-3.  Log in to CS.RIN.RU in the window that appears. It will close automatically upon success.
+1.  **Tutorial**: Follow the on-screen tutorial to understand how RinChekr works.
+2.  **Login**: If prompted, or via **Settings** -> **Reauthorize Account**, log in to CS.RIN.RU.
+3.  The login window will close automatically upon success.
 
 ### Adding a Game
 1.  Click the **+** button.
