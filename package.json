@@ -29,7 +29,7 @@
     "appId": "com.rin.checker",
     "productName": "RinChekr",
     "directories": {
-      "output": "dist",
+      "output": "release",
       "buildResources": "build"
     },
     "win": {

@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import path from 'path'
 import Store from 'electron-store'
 import { getIGDBToken, searchIGDB } from './igdb'
+import { calculatePostScore } from './scorer'
 
 // Types
 interface Game {
@@ -289,7 +290,140 @@ app.whenReady().then(() => {
         }
     }
 
-    // IPC Handlers
+    // Helper: Check for Updates (Real Logic)
+    const checkForUpdates = async (url: string, lastPostUrl?: string) => {
+        return new Promise<{ status: Game['status'], lastPostUrl?: string, updateDate?: string }>((resolve) => {
+            const fetcher = new BrowserWindow({
+                show: false,
+                width: 1024,
+                height: 800,
+                webPreferences: { offscreen: true } // Render offscreen
+            })
+
+            let retries = 0;
+            const maxRetries = 1;
+
+            const timeout = setTimeout(() => {
+                if (!fetcher.isDestroyed()) fetcher.destroy();
+                resolve({ status: 'error' });
+            }, 30000); // 30s timeout for full page load
+
+            fetcher.webContents.on('did-finish-load', async () => {
+                try {
+                    const title = fetcher.getTitle();
+                    // Cloudflare Bypass
+                    if (title.match(/Just a moment|Security Check|Attention Required|Cloudflare/i)) {
+                        if (retries < maxRetries) {
+                            retries++;
+                            return;
+                        }
+                        if (!fetcher.isDestroyed()) fetcher.destroy();
+                        clearTimeout(timeout);
+                        resolve({ status: 'error' });
+                        return;
+                    }
+
+                    // Scrape Posts
+                    const posts = await fetcher.webContents.executeJavaScript(`
+                        (() => {
+                            const posts = Array.from(document.querySelectorAll('.post')); 
+                            // Note: RIN structure is .post.bg1/.bg2
+                            // Also need to handle "View topic - ..."
+                            
+                            return posts.map(p => {
+                                const id = p.id; // e.g., p153567
+                                const content = p.querySelector('.content')?.innerHTML || '';
+                                const text = p.querySelector('.content')?.innerText || '';
+                                
+                                // Find post link (usually in h3 > a)
+                                const linkElem = p.querySelector('h3 a') || p.querySelector('.post-subject a');
+                                const url = linkElem ? linkElem.href : '';
+
+                                return { id, content, text, url };
+                            });
+                        })()
+                    `);
+
+                    if (!fetcher.isDestroyed()) fetcher.destroy();
+                    clearTimeout(timeout);
+
+                    // Analyze Posts
+                    let hasUpdate = false;
+                    let hasNewActivity = false;
+                    let latestPostUrl = lastPostUrl;
+
+                    // If no posts found, maybe structure changed or login required
+                    if (!posts || posts.length === 0) {
+                        resolve({ status: 'checking' }); // or 'up-to-date' fallback
+                        return;
+                    }
+
+                    // Iterate posts (they are usually chronological OLD -> NEW on a page)
+                    // We need to find posts NEWER than lastPostUrl.
+                    // If lastPostUrl is undefined, we assume everything is "new" but maybe not an update unless scored high.
+
+                    // Simple check: Is the LAST post on this page different from our stored lastPostUrl?
+                    // If so, we have new activity.
+                    const lastPagePost = posts[posts.length - 1];
+
+                    if (lastPagePost && lastPagePost.url !== lastPostUrl) {
+                        hasNewActivity = true;
+                        latestPostUrl = lastPagePost.url;
+
+                        // Check scores of ALL new posts (after the one we knew)
+                        // If we don't know which one was last, we check all on this page.
+                        // Optimization: Check from bottom up.
+                        for (let i = posts.length - 1; i >= 0; i--) {
+                            const p = posts[i];
+                            if (p.url === lastPostUrl) break; // Reached known state
+
+                            const score = calculatePostScore(p.content, p.text);
+                            // console.log('Post Score:', p.id, score);
+
+                            if (score > 0) {
+                                // > 0 means "Activity" but for "Update Available" we want high confidence?
+                                // Scorer says > 15 is match.
+                                if (score > 15) {
+                                    hasUpdate = true;
+                                    break; // Found an update!
+                                }
+                            }
+                        }
+                    }
+
+                    if (hasUpdate) resolve({ status: 'update-available', lastPostUrl: latestPostUrl, updateDate: new Date().toISOString() });
+                    else if (hasNewActivity) resolve({ status: 'new-activity', lastPostUrl: latestPostUrl });
+                    else resolve({ status: 'up-to-date', lastPostUrl: latestPostUrl });
+
+                } catch (e) {
+                    if (!fetcher.isDestroyed()) fetcher.destroy();
+                    clearTimeout(timeout);
+                    resolve({ status: 'error' });
+                }
+            })
+
+            // Inject Cookies & UA
+            const sessionCookies = store.get('sessionCookies');
+            const token = store.get('sessionToken');
+            const cookieName = store.get('sessionCookieName') || 'phpbb3_frn0e_sid';
+            const storedUA = store.get('userAgent') || USER_AGENT;
+
+            if (sessionCookies && Array.isArray(sessionCookies)) {
+                sessionCookies.forEach(c => {
+                    fetcher.webContents.session.cookies.set({
+                        url: 'https://cs.rin.ru', name: c.name, value: c.value, domain: c.domain, path: c.path, secure: c.secure, httpOnly: c.httpOnly
+                    }).catch(() => { });
+                });
+            } else if (token) {
+                fetcher.webContents.session.cookies.set({ url: 'https://cs.rin.ru', name: cookieName, value: token }).catch(() => { });
+            }
+
+            // Force Load Last Page
+            // phpBB trick: start=9999999
+            const checkUrl = url + (url.includes('?') ? '&' : '?') + 'start=9999999';
+            fetcher.loadURL(checkUrl, { userAgent: storedUA });
+        })
+    }
     ipcMain.handle('get-games', () => {
         return store.get('games', [])
     })
@@ -437,34 +571,50 @@ app.whenReady().then(() => {
         }
     })
 
-    // New: Check single game fully (placeholder for future deep check)
     ipcMain.handle('check-game', async (_event, id: string) => {
         const games = store.get('games', [])
         const game = games.find(g => g.id === id)
         if (!game) return null;
 
-        // Provide a fast "fake" check for UX purposes now
-        // Real check blocked by Cloudflare
+        // Use Real Logic
+        const result = await checkForUpdates(game.url, game.lastPostUrl);
+
         return {
             id: game.id,
-            status: 'up-to-date',
+            status: result.status,
+            lastPostUrl: result.lastPostUrl, // Save the new post URL
+            lastUpdated: result.updateDate || game.lastUpdated, // Only update date if meaningful
             lastChecked: new Date().toISOString()
         }
     })
 
     ipcMain.handle('check-all-updates', async () => {
-        // Placeholder: Just simulate checking all
         const games = store.get('games', [])
-        const updatedGames = games.map(g => ({
-            ...g,
-            status: 'up-to-date', // Reset to valid status
-            lastChecked: new Date().toISOString()
-        }))
-        store.set('games', updatedGames)
-        // Notify renderer
-        if (win) {
-            updatedGames.forEach(g => win?.webContents.send('update-status', g))
+
+        // Parallel check (limit concurrency ideally, but for now map is okay)
+        // We'll process them one by one to avoid triggering Cloudflare Limits
+        const updatedGames = [...games];
+
+        for (let i = 0; i < updatedGames.length; i++) {
+            const game = updatedGames[i];
+            const result = await checkForUpdates(game.url, game.lastPostUrl);
+
+            updatedGames[i] = {
+                ...game,
+                status: result.status,
+                lastPostUrl: result.lastPostUrl || game.lastPostUrl,
+                lastUpdated: result.updateDate || game.lastUpdated,
+                lastChecked: new Date().toISOString()
+            };
+
+            store.set('games', updatedGames); // Save incrementally
+            if (win) win.webContents.send('update-status', updatedGames[i]);
+
+            // Wait a random bit to be nice to the server (1-3s)
+            await new Promise(r => setTimeout(r, 1000 + Math.random() * 2000));
         }
+
+        store.set('games', updatedGames)
     })
 
     // New: Explicitly refresh metadata from Steam
