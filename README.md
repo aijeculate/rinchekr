@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="build/icon.png" alt="RinChekr Logo" width="128" height="128" />
+  <img src="build/RinChekr.ico" alt="RinChekr Logo" width="128" height="128" />
   
   # RinChekr
   
