@@ -7,6 +7,8 @@ import { GameDetails } from './components/GameDetails'
 import { Game } from './types'
 import { useToast } from './context/ToastContext'
 
+import { TutorialModal } from './components/TutorialModal'
+
 function App() {
   const [games, setGames] = useState<Game[]>([])
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -17,6 +19,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [scale, setScale] = useState(1)
   const [darkMode, setDarkMode] = useState(true)
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false)
 
   const [newGameName, setNewGameName] = useState('')
   const [newGameUrl, setNewGameUrl] = useState('')
@@ -26,6 +29,11 @@ function App() {
 
   useEffect(() => {
     loadGames()
+
+    // Check Tutorial Status
+    window.api.getTutorialStatus().then(seen => {
+      if (!seen) setIsTutorialOpen(true);
+    });
 
     // Apply Theme
     document.documentElement.style.setProperty('--app-scale', scale.toString())
@@ -267,8 +275,19 @@ function App() {
       <Settings
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        scale={scale} setScale={setScale}
-        darkMode={darkMode} toggleTheme={() => setDarkMode(!darkMode)}
+        scale={scale}
+        setScale={setScale}
+        darkMode={darkMode}
+        toggleTheme={() => setDarkMode(!darkMode)}
+        onShowTutorial={() => setIsTutorialOpen(true)}
+      />
+
+      <TutorialModal
+        isOpen={isTutorialOpen}
+        onClose={() => {
+          setIsTutorialOpen(false);
+          window.api.setTutorialStatus(true);
+        }}
       />
 
       {isAddModalOpen && (

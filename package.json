@@ -1,7 +1,9 @@
 {
   "name": "cs-rin-updates",
   "private": true,
-  "version": "1.0.0",
+  "version": "3.18.6",
+  "description": "RinChekr is a modern, high-performance desktop application designed to track game updates on cs.rin.ru. Unlike basic scrapers that just check for new posts, RinChekr uses smart \"Deep Scanning\" algorithms to differentiate between actual game releases and random forum chatter.",
+  "author": "aijeculate",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
@@ -33,7 +35,7 @@
       "buildResources": "build"
     },
     "win": {
-      "icon": "build/icon.png",
+      "icon": "build/RinChekr.ico",
       "target": [
         "nsis",
         "portable"

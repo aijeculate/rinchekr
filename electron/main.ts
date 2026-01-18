@@ -37,8 +37,16 @@ const store = new Store<{
     igdbClientId?: string,
     igdbClientSecret?: string,
     igdbAccessToken?: string,
-    igdbTokenExpiry?: number
-}>()
+    igdbTokenExpiry?: number,
+    hasSeenTutorial?: boolean
+}>(
+    {
+        defaults: {
+            games: [],
+            hasSeenTutorial: false
+        }
+    }
+)
 let win: BrowserWindow | null = null
 
 function createWindow() {
@@ -56,7 +64,8 @@ function createWindow() {
             color: '#0f172a',
             symbolColor: '#f1f5f9',
             height: 35
-        }
+        },
+        icon: path.join(__dirname, '../build/RinChekr.ico')
     })
 
     if (process.env.VITE_DEV_SERVER_URL) {
@@ -404,17 +413,46 @@ app.whenReady().then(() => {
                         })()
                     `);
 
-                    if (!fetcher.isDestroyed()) fetcher.destroy();
-                    clearTimeout(timeout);
-
                     // Analyze Posts
                     let hasUpdate = false;
 
-
                     if (!posts || posts.length === 0) {
-                        resolve({ status: 'up-to-date', debugNote: 'No posts found on page (Scraper mismatch?)' });
+                        // DIAGNOSTICS: Why no posts?
+                        const pageTitle = await fetcher.webContents.getTitle();
+                        const pageUrl = fetcher.webContents.getURL();
+
+                        let statusNote = 'No posts found on page';
+                        let status: Game['status'] = 'up-to-date'; // Default to safe
+
+                        if (pageTitle.includes('Login')) {
+                            statusNote = 'Login Required (Page Title)';
+                        } else if (pageTitle.includes('Cloudflare') || pageTitle.includes('Just a moment')) {
+                            statusNote = 'Blocked by Cloudflare';
+                        } else if (pageTitle.includes('Information')) {
+                            statusNote = 'Generic Info Page (Topic Removed?)';
+                        } else {
+                            // Grab a snippet of body to see what's there
+                            try {
+                                const bodyText = await fetcher.webContents.executeJavaScript(`document.body.innerText.substring(0, 100)`);
+                                statusNote = `Scraper Mismatch. Title: "${pageTitle}". Body: "${bodyText.replace(/\\n/g, ' ')}..."`;
+                            } catch (e) {
+                                statusNote = `Scraper Mismatch. Title: "${pageTitle}". (Body access failed)`;
+                            }
+                        }
+
+                        console.log(`[Scrape Fail] ${statusNote} | URL: ${pageUrl}`);
+
+                        // NOW we can destroy
+                        if (!fetcher.isDestroyed()) fetcher.destroy();
+                        clearTimeout(timeout);
+
+                        resolve({ status: status, debugNote: statusNote });
                         return;
                     }
+
+                    // Success case - destroy window
+                    if (!fetcher.isDestroyed()) fetcher.destroy();
+                    clearTimeout(timeout);
 
                     // Determine "Latest Post" (Cursor)
                     const lastPagePost = posts[posts.length - 1];
@@ -765,6 +803,16 @@ app.whenReady().then(() => {
         store.set('sessionCookieName', name)
         return true
     })
+
+    // Tutorial IPC
+    ipcMain.handle('get-tutorial-status', () => {
+        return store.get('hasSeenTutorial', false);
+    });
+
+    ipcMain.handle('set-tutorial-status', (_event, status: boolean) => {
+        store.set('hasSeenTutorial', status);
+        return true;
+    });
 
     ipcMain.handle('login-via-browser', async () => {
         return new Promise((resolve) => {

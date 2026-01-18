@@ -8,6 +8,7 @@ interface SettingsProps {
     setScale: (scale: number) => void;
     darkMode: boolean;
     toggleTheme: () => void;
+    onShowTutorial: () => void;
 }
 
 const IGDBSettings: React.FC = () => {
@@ -86,7 +87,7 @@ const IGDBSettings: React.FC = () => {
 };
 
 export const Settings: React.FC<SettingsProps> = ({
-    isOpen, onClose, scale, setScale, darkMode, toggleTheme
+    isOpen, onClose, scale, setScale, darkMode, toggleTheme, onShowTutorial
 }) => {
     const [testStatus, setTestStatus] = React.useState<{ success: boolean, message: string } | null>(null);
     const [isTesting, setIsTesting] = React.useState(false);
@@ -136,7 +137,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         </div>
 
                         <label style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>UI Scale</span>
+                            <span>UI Scale & Help</span>
                             <span>{Math.round(scale * 100)}%</span>
                         </label>
                         <input
@@ -146,8 +147,11 @@ export const Settings: React.FC<SettingsProps> = ({
                             step="0.05"
                             value={scale}
                             onChange={(e) => setScale(parseFloat(e.target.value))}
-                            style={{ width: '100%', marginTop: '8px' }}
+                            style={{ width: '100%', marginTop: '8px', marginBottom: '12px' }}
                         />
+                        <button className="btn-secondary" onClick={onShowTutorial} style={{ width: '100%', padding: '8px' }}>
+                            Show Tutorial
+                        </button>
                     </div>
 
                     {/* CS.RIN.RU Login Section */}
@@ -187,7 +191,7 @@ export const Settings: React.FC<SettingsProps> = ({
                                 disabled={isTesting}
                             >
                                 <span>🔐</span>
-                                {isTesting ? 'Waiting...' : (isLoggedIn ? 'Re-Login via Browser' : 'Login via Browser')}
+                                {isTesting ? 'Waiting...' : (isLoggedIn ? 'Reauthorize Account (Refresh Tokens)' : 'Login via Browser')}
                             </button>
 
                             {testStatus && (
@@ -220,7 +224,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: '24px', flexShrink: 0 }}>
                     <h3 style={{ fontSize: '1rem', marginTop: 0 }}>About</h3>
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                        <p style={{ margin: '4px 0' }}><strong>CS.RIN.RU Update Checker</strong> v3.16</p>
+                        <p style={{ margin: '4px 0' }}><strong>CS.RIN.RU Update Checker</strong> v3.18.3</p>
                         <p style={{ margin: '4px 0' }}>Premium game manager & update tracker.</p>
                     </div>
                 </div>

@@ -43,4 +43,6 @@ export interface ElectronApi {
     previewUpdate: (url: string) => Promise<void>
     launchGame: (path: string) => Promise<boolean>
     onUpdateStatus: (callback: (data: any) => void) => void
+    getTutorialStatus: () => Promise<boolean>
+    setTutorialStatus: (status: boolean) => Promise<boolean>
 }

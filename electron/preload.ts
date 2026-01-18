@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('api', {
     updateGame: (game: any) => ipcRenderer.invoke('update-game', game),
     openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
     launchGame: (path: string) => ipcRenderer.invoke('launch-game', path),
+    getTutorialStatus: () => ipcRenderer.invoke('get-tutorial-status'),
+    setTutorialStatus: (status: boolean) => ipcRenderer.invoke('set-tutorial-status', status),
     checkGame: (id: string) => ipcRenderer.invoke('check-game', id),
     checkAllUpdates: () => ipcRenderer.invoke('check-all-updates'),
     refreshMetadata: (name: string) => ipcRenderer.invoke('refresh-metadata', name),
