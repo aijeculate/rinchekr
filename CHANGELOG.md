@@ -1,5 +1,20 @@
 # Changelog
 
+
+## [3.18.3] - 2026-01-18 (Gold Release)
+
+### Added
+-   **Smart Update Logic**: Differentiates between "Latest Activity" (new posts) and verified "Updates" (releases/cracks).
+-   **Text Snippets**: Game Details now shows a preview of the latest post content so you know what the update is about.
+-   **Custom Icon**: Application now properly uses the custom `RinChekr.ico` for all windows and installers.
+-   **Metadata**: Added full author and description metadata to the package.
+
+### Fixed
+-   **Persistence Bug**: Fixed a critical issue where the app would "forget" it had seen an update, causing it to notify you about the same update repeatedly.
+-   **Scraper Logic**: Completely rewrote the scraping engine to use robust numeric ID detection (`p12345`) and fallback selectors, fixing the "Found 0 posts" error.
+-   **URL Extraction**: Fixed an issue where the "View Post" button would link to the wrong page or generic URL.
+-   **Infinite Spinner**: Fixed cases where the "Checking..." status would get stuck indefinitely.
+
 ## [3.17] - 2026-01-17
 
 ### Added
